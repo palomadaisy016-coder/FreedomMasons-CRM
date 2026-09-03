@@ -95,20 +95,33 @@ export default function ProjectsPage() {
   const { rows, loading, add, update, remove } = useTable("projects");
   const leadsTable = useTable("leads");
   const [modal, setModal] = useState(null);
+  const [query, setQuery] = useState("");
 
   if (loading || leadsTable.loading) return <p className="text-sm text-muted">Loading…</p>;
 
   const leadName = (id) => leadsTable.rows.find((l) => l.id === id)?.name || "";
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? rows.filter((p) => `${p.name} ${p.client || ""} ${leadName(p.lead_id)}`.toLowerCase().includes(q))
+    : rows;
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 gap-3">
         <h1 className="text-lg font-semibold text-ink">Projects</h1>
-        <PrimaryButton onClick={() => setModal({})}>Add project</PrimaryButton>
+        <div className="flex items-center gap-3">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search projects…"
+            className="w-56"
+          />
+          <PrimaryButton onClick={() => setModal({})}>Add project</PrimaryButton>
+        </div>
       </div>
 
       <div className="grid gap-2">
-        {rows.map((p) => (
+        {filtered.map((p) => (
           <div
             key={p.id}
             onClick={() => setModal(p)}
@@ -125,6 +138,9 @@ export default function ProjectsPage() {
             <Badge text={p.status} tone={TONE[p.status]} />
           </div>
         ))}
+        {filtered.length === 0 && rows.length > 0 && (
+          <p className="text-sm text-muted py-6 text-center">No projects match "{query}".</p>
+        )}
         {rows.length === 0 && (
           <EmptyState text="No projects logged yet." actionLabel="Add project" onAction={() => setModal({})} />
         )}
