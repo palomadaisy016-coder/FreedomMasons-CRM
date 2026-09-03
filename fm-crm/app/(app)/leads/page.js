@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { useTable } from "@/lib/useTable";
-import { Modal, Field, PrimaryButton, GhostButton, money } from "../../components/ui";
+import { Modal, Field, PrimaryButton, GhostButton } from "../../components/ui";
 
 const STAGES = ["New", "Contacted", "Quoted", "Won", "Lost"];
 
 function LeadForm({ initial, onSave, onCancel, onDelete }) {
   const [f, setF] = useState(
-    initial || { name: "", company: "", phone: "", email: "", source: "", stage: "New", value: "", notes: "" }
+    initial || { name: "", company: "", phone: "", email: "", stage: "New", notes: "" }
   );
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
 
@@ -33,14 +33,6 @@ function LeadForm({ initial, onSave, onCancel, onDelete }) {
         </Field>
         <Field label="Email">
           <input value={f.email} onChange={set("email")} />
-        </Field>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Source">
-          <input value={f.source} onChange={set("source")} />
-        </Field>
-        <Field label="Est. value">
-          <input type="number" value={f.value} onChange={set("value")} />
         </Field>
       </div>
       <Field label="Stage">
@@ -102,7 +94,6 @@ export default function LeadsPage() {
                   >
                     <div className="text-sm font-medium">{l.name}</div>
                     {l.company && <div className="text-xs text-muted">{l.company}</div>}
-                    {Number(l.value) > 0 && <div className="text-xs text-accent mt-1">{money(l.value)}</div>}
                   </div>
                 ))}
               </div>
