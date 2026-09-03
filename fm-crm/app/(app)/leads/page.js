@@ -67,19 +67,33 @@ function LeadForm({ initial, onSave, onCancel, onDelete }) {
 export default function LeadsPage() {
   const { rows, loading, add, update, remove } = useTable("leads");
   const [modal, setModal] = useState(null);
+  const [query, setQuery] = useState("");
 
   if (loading) return <p className="text-sm text-muted">Loading…</p>;
 
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? rows.filter((l) => `${l.name} ${l.company || ""}`.toLowerCase().includes(q))
+    : rows;
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 gap-3">
         <h1 className="text-lg font-semibold text-ink">Leads</h1>
-        <PrimaryButton onClick={() => setModal({})}>Add lead</PrimaryButton>
+        <div className="flex items-center gap-3">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search leads…"
+            className="w-56"
+          />
+          <PrimaryButton onClick={() => setModal({})}>Add lead</PrimaryButton>
+        </div>
       </div>
 
       <div className="flex gap-4 overflow-x-auto pb-2">
         {STAGES.map((stage) => {
-          const items = rows.filter((l) => l.stage === stage);
+          const items = filtered.filter((l) => l.stage === stage);
           return (
             <div key={stage} className="min-w-[210px] flex-shrink-0">
               <div className="text-xs font-semibold text-muted uppercase tracking-wide mb-2 pb-1 border-b border-line">
