@@ -78,20 +78,33 @@ export default function InvoicesPage() {
   const { rows, loading, add, update, remove } = useTable("invoices");
   const projectsTable = useTable("projects");
   const [modal, setModal] = useState(null);
+  const [query, setQuery] = useState("");
 
   if (loading || projectsTable.loading) return <p className="text-sm text-muted">Loading…</p>;
 
   const projectName = (id) => projectsTable.rows.find((p) => p.id === id)?.name || "";
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? rows.filter((inv) => `${inv.client || ""} ${projectName(inv.project_id)}`.toLowerCase().includes(q))
+    : rows;
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 gap-3">
         <h1 className="text-lg font-semibold text-ink">Invoices</h1>
-        <PrimaryButton onClick={() => setModal({})}>Add invoice</PrimaryButton>
+        <div className="flex items-center gap-3">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search invoices…"
+            className="w-56"
+          />
+          <PrimaryButton onClick={() => setModal({})}>Add invoice</PrimaryButton>
+        </div>
       </div>
 
       <div className="grid gap-2">
-        {rows.map((inv) => (
+        {filtered.map((inv) => (
           <div
             key={inv.id}
             onClick={() => setModal(inv)}
@@ -111,6 +124,9 @@ export default function InvoicesPage() {
             </div>
           </div>
         ))}
+        {filtered.length === 0 && rows.length > 0 && (
+          <p className="text-sm text-muted py-6 text-center">No invoices match "{query}".</p>
+        )}
         {rows.length === 0 && (
           <EmptyState text="No invoices yet." actionLabel="Add invoice" onAction={() => setModal({})} />
         )}
