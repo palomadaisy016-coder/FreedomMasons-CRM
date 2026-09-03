@@ -27,7 +27,10 @@ export default function NavBar({ email }) {
     <div className="border-b border-line bg-white">
       <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-6">
-          <span className="font-semibold text-ink">Freedom Masons CRM</span>
+          <div className="flex items-center gap-2">
+            <img src="/logo.png" alt="Company logo" className="h-7 w-auto" />
+            <span className="font-semibold text-ink">Freedom Masons CRM</span>
+          </div>
           <nav className="flex gap-1">
             {links.map((l) => (
               <Link
