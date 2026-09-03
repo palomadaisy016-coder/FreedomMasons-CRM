@@ -52,19 +52,34 @@ export default function TasksPage() {
   const { rows, loading, add, update, remove } = useTable("tasks");
   const projectsTable = useTable("projects");
   const [modal, setModal] = useState(null);
+  const [query, setQuery] = useState("");
 
   if (loading || projectsTable.loading) return <p className="text-sm text-muted">Loading…</p>;
 
   const projectName = (id) => projectsTable.rows.find((p) => p.id === id)?.name || "";
-  const sorted = [...rows].sort(
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? rows.filter((t) =>
+        `${t.title} ${projectName(t.project_id)} ${t.assignee || ""}`.toLowerCase().includes(q)
+      )
+    : rows;
+  const sorted = [...filtered].sort(
     (a, b) => Number(a.done) - Number(b.done) || (a.due_date || "").localeCompare(b.due_date || "")
   );
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 gap-3">
         <h1 className="text-lg font-semibold text-ink">Tasks</h1>
-        <PrimaryButton onClick={() => setModal({})}>Add task</PrimaryButton>
+        <div className="flex items-center gap-3">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search tasks…"
+            className="w-56"
+          />
+          <PrimaryButton onClick={() => setModal({})}>Add task</PrimaryButton>
+        </div>
       </div>
 
       <div className="grid gap-2">
@@ -91,6 +106,9 @@ export default function TasksPage() {
             </button>
           </div>
         ))}
+        {filtered.length === 0 && rows.length > 0 && (
+          <p className="text-sm text-muted py-6 text-center">No tasks match "{query}".</p>
+        )}
         {rows.length === 0 && <EmptyState text="No tasks yet." actionLabel="Add task" onAction={() => setModal({})} />}
       </div>
 
