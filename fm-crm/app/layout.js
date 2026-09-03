@@ -1,14 +1,24 @@
-import "./globals.css";
+import { createClient } from "@/lib/supabase/server";
+import NavBar from "../components/NavBar";
 
-export const metadata = {
-  title: "Freedom Masons CRM",
-  description: "Leads, projects, invoices, and tasks for Freedom Masons",
-};
+export default async function AppLayout({ children }) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
-    </html>
+    <div className="min-h-screen bg-paper relative">
+      <div
+        className="fixed inset-0 flex items-center justify-center overflow-hidden pointer-events-none"
+        style={{ zIndex: 0 }}
+      >
+        <img src="/logo.png" alt="" className="w-[900px] max-w-none opacity-[0.05]" />
+      </div>
+      <div className="relative" style={{ zIndex: 1 }}>
+        <NavBar email={user?.email} />
+        <div className="max-w-5xl mx-auto px-6 py-6">{children}</div>
+      </div>
+    </div>
   );
 }
