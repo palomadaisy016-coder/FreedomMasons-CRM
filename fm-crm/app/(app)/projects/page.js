@@ -14,6 +14,17 @@ function fmtTime(ts) {
   if (!ts) return "";
   return new Date(ts).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
+function readKey(me, other) {
+  return `unread_last_read::${me}::${other}`;
+}
+function lastRead(me, other) {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(readKey(me, other));
+}
+function markRead(me, other) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(readKey(me, other), new Date().toISOString());
+}
 
 export default function ChatsPage() {
   const supabase = createClient();
@@ -61,7 +72,11 @@ export default function ChatsPage() {
     .map((key) => {
       const msgs = myMessages.filter((m) => m.client === key);
       const last = msgs[msgs.length - 1];
-      return { key, other: otherOf(key, myEmail), last };
+      const other = otherOf(key, myEmail);
+      const lastIncoming = msgs.filter((m) => m.status !== myEmail).slice(-1)[0];
+      const readAt = lastRead(myEmail, other);
+      const unread = lastIncoming && (!readAt || lastIncoming.created_at > readAt);
+      return { key, other, last, unread };
     })
     .sort((a, b) => new Date(b.last?.created_at || 0) - new Date(a.last?.created_at || 0));
 
@@ -70,6 +85,10 @@ export default function ChatsPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [thread.length, active]);
+
+  useEffect(() => {
+    if (active && myEmail) markRead(myEmail, active);
+  }, [active, thread.length, myEmail]);
 
   const openChat = (email) => {
     const clean = (email || "").trim().toLowerCase();
@@ -141,14 +160,19 @@ export default function ChatsPage() {
             <button
               key={c.key}
               onClick={() => openChat(c.other)}
-              className={`w-full text-left px-3 py-2 text-sm border-b border-line hover:bg-white ${
+              className={`w-full text-left px-3 py-2 text-sm border-b border-line hover:bg-white flex items-center justify-between gap-2 ${
                 active === c.other ? "bg-white font-medium" : ""
               }`}
             >
-              <div className="truncate">{c.other}</div>
-              <div className="text-xs text-muted truncate">
-                {c.last?.name ? "📷 Image" : c.last?.notes || ""}
+              <div className="min-w-0">
+                <div className="truncate">{c.other}</div>
+                <div className="text-xs text-muted truncate">
+                  {c.last?.name ? "📷 Image" : c.last?.notes || ""}
+                </div>
               </div>
+              {c.unread && active !== c.other && (
+                <span className="shrink-0 w-2.5 h-2.5 rounded-full bg-danger" />
+              )}
             </button>
           ))}
         </div>
