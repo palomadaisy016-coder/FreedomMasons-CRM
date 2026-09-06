@@ -1,9 +1,7 @@
 "use client";
-
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-
 const links = [
   { href: "/", label: "Dashboard" },
   { href: "/leads", label: "Leads" },
@@ -12,25 +10,22 @@ const links = [
   { href: "/tasks", label: "Tasks" },
   { href: "/lost-clients", label: "Lost Clients" },
 ];
-
 export default function NavBar({ email }) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
-
   const signOut = async () => {
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();
   };
-
   return (
     <div className="border-b border-line bg-white">
       <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
             <img src="/logo.png" alt="Company logo" className="h-7 w-auto" />
-            <span className="font-semibold text-ink">Freedom Masons CRM</span>
+            <span className="font-semibold text-ink">Outreach 360 CRM</span>
           </div>
           <nav className="flex gap-1">
             {links.map((l) => (
