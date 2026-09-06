@@ -1,9 +1,7 @@
 "use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -11,7 +9,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -25,7 +22,6 @@ export default function LoginPage() {
     router.push("/");
     router.refresh();
   };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-paper px-4">
       <form onSubmit={handleSubmit} className="w-full max-w-sm bg-white border border-line rounded-lg p-6">
@@ -58,6 +54,9 @@ export default function LoginPage() {
         </button>
         <p className="text-xs text-muted mt-4">
           No account yet? Ask your admin to add you in the Supabase dashboard (Authentication → Users).
+        </p>
+        <p className="text-xs text-muted text-center mt-6">
+          Developed by Muhammad Haseeb Nadeem | Outreach 360 © 2026
         </p>
       </form>
     </div>
