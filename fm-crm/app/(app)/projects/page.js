@@ -1,173 +1,212 @@
 "use client";
 
-import { useState } from "react";
-import { useTable } from "@/lib/useTable";
-import { Modal, Field, Badge, PrimaryButton, GhostButton, EmptyState, fmtDate } from "../../components/ui";
+import { useEffect, useRef, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
-const STATUSES = ["Planning", "Drafting", "Review", "Complete"];
-const TONE = { Planning: "default", Drafting: "accent", Review: "accent", Complete: "success" };
-
-function ProjectForm({ initial, leads, onSave, onCancel, onDelete }) {
-  const [f, setF] = useState(
-    initial || {
-      name: "",
-      client: "",
-      lead_id: "",
-      status: "Planning",
-      start_date: "",
-      due_date: "",
-      budget: "",
-      notes: "",
-    }
-  );
-  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
-
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!f.name.trim()) return;
-        onSave(f);
-      }}
-      className="grid gap-3"
-    >
-      <Field label="Project name">
-        <input value={f.name} onChange={set("name")} required />
-      </Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Client">
-          <input value={f.client} onChange={set("client")} />
-        </Field>
-        <Field label="Linked lead">
-          <select value={f.lead_id || ""} onChange={set("lead_id")}>
-            <option value="">None</option>
-            {leads.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Start date">
-          <input type="date" value={f.start_date || ""} onChange={set("start_date")} />
-        </Field>
-        <Field label="Due date">
-          <input type="date" value={f.due_date || ""} onChange={set("due_date")} />
-        </Field>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Budget">
-          <input type="number" value={f.budget} onChange={set("budget")} />
-        </Field>
-        <Field label="Status">
-          <select value={f.status} onChange={set("status")}>
-            {STATUSES.map((s) => (
-              <option key={s}>{s}</option>
-            ))}
-          </select>
-        </Field>
-      </div>
-      <Field label="Scope notes">
-        <textarea rows={3} value={f.notes} onChange={set("notes")} />
-      </Field>
-      <div className="flex justify-between items-center mt-1">
-        {onDelete ? (
-          <button type="button" onClick={onDelete} className="text-danger text-sm">
-            Delete
-          </button>
-        ) : (
-          <span />
-        )}
-        <div className="flex gap-2">
-          <GhostButton type="button" onClick={onCancel}>
-            Cancel
-          </GhostButton>
-          <PrimaryButton type="submit">Save</PrimaryButton>
-        </div>
-      </div>
-    </form>
-  );
+function convKey(a, b) {
+  return [a, b].filter(Boolean).sort().join("::");
+}
+function otherOf(key, me) {
+  const parts = key.split("::");
+  return parts.find((p) => p !== me) || parts[0];
+}
+function fmtTime(ts) {
+  if (!ts) return "";
+  return new Date(ts).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-export default function ProjectsPage() {
-  const { rows, loading, add, update, remove } = useTable("projects");
-  const leadsTable = useTable("leads");
-  const [modal, setModal] = useState(null);
-  const [query, setQuery] = useState("");
+export default function ChatsPage() {
+  const supabase = createClient();
+  const [me, setMe] = useState(null);
+  const [allMessages, setAllMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [active, setActive] = useState(null);
+  const [newEmail, setNewEmail] = useState("");
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const fileRef = useRef(null);
+  const bottomRef = useRef(null);
 
-  if (loading || leadsTable.loading) return <p className="text-sm text-muted">Loading…</p>;
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setMe(data.user));
+  }, []);
 
-  const leadName = (id) => leadsTable.rows.find((l) => l.id === id)?.name || "";
-  const q = query.trim().toLowerCase();
-  const filtered = q
-    ? rows.filter((p) => `${p.name} ${p.client || ""} ${leadName(p.lead_id)}`.toLowerCase().includes(q))
-    : rows;
+  useEffect(() => {
+    let channel;
+    const load = async () => {
+      const { data } = await supabase.from("projects").select("*").order("created_at", { ascending: true });
+      setAllMessages(data || []);
+      setLoading(false);
+    };
+    load();
+
+    channel = supabase
+      .channel("dm-projects")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "projects" },
+        (payload) => setAllMessages((prev) => [...prev, payload.new])
+      )
+      .subscribe();
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const myEmail = me?.email;
+  const myMessages = myEmail ? allMessages.filter((m) => m.client && m.client.split("::").includes(myEmail)) : [];
+
+  const conversations = Array.from(new Set(myMessages.map((m) => m.client)))
+    .map((key) => {
+      const msgs = myMessages.filter((m) => m.client === key);
+      const last = msgs[msgs.length - 1];
+      return { key, other: otherOf(key, myEmail), last };
+    })
+    .sort((a, b) => new Date(b.last?.created_at || 0) - new Date(a.last?.created_at || 0));
+
+  const thread = active ? myMessages.filter((m) => m.client === convKey(myEmail, active)) : [];
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [thread.length, active]);
+
+  const openChat = (email) => {
+    if (!email || email === myEmail) return;
+    setActive(email);
+    setNewEmail("");
+  };
+
+  const sendMessage = async (e) => {
+    e.preventDefault();
+    if (!text.trim() || !active || sending) return;
+    setSending(true);
+    await supabase.from("projects").insert({
+      name: "",
+      client: convKey(myEmail, active),
+      notes: text.trim(),
+      status: myEmail,
+      created_by: me?.id || null,
+    });
+    setText("");
+    setSending(false);
+  };
+
+  const sendImage = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !active) return;
+    setSending(true);
+    const path = `${Date.now()}-${file.name}`;
+    const { error: uploadError } = await supabase.storage.from("chat-images").upload(path, file);
+    if (!uploadError) {
+      const { data } = supabase.storage.from("chat-images").getPublicUrl(path);
+      await supabase.from("projects").insert({
+        name: data.publicUrl,
+        client: convKey(myEmail, active),
+        notes: "",
+        status: myEmail,
+        created_by: me?.id || null,
+      });
+    }
+    setSending(false);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  if (loading) return <p className="text-sm text-muted">Loading…</p>;
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-4 gap-3">
-        <h1 className="text-lg font-semibold text-ink">Projects</h1>
-        <div className="flex items-center gap-3">
+    <div className="flex h-[calc(100vh-140px)] border border-line rounded-lg overflow-hidden">
+      <div className="w-64 border-r border-line bg-paper flex flex-col shrink-0">
+        <div className="p-3 border-b border-line">
           <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search projects…"
-            className="w-56"
+            value={newEmail}
+            onChange={(e) => setNewEmail(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && openChat(newEmail.trim())}
+            placeholder="Start chat: teammate's email"
+            className="w-full text-sm"
           />
-          <PrimaryButton onClick={() => setModal({})}>Add project</PrimaryButton>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          {conversations.length === 0 && (
+            <p className="text-xs text-muted p-3">No conversations yet — enter an email above to start one.</p>
+          )}
+          {conversations.map((c) => (
+            <button
+              key={c.key}
+              onClick={() => openChat(c.other)}
+              className={`w-full text-left px-3 py-2 text-sm border-b border-line hover:bg-white ${
+                active === c.other ? "bg-white font-medium" : ""
+              }`}
+            >
+              <div className="truncate">{c.other}</div>
+              <div className="text-xs text-muted truncate">
+                {c.last?.name ? "📷 Image" : c.last?.notes || ""}
+              </div>
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="grid gap-2">
-        {filtered.map((p) => (
-          <div
-            key={p.id}
-            onClick={() => setModal(p)}
-            className="bg-white border border-line rounded-lg px-4 py-3 flex items-center justify-between cursor-pointer hover:border-accent"
-          >
-            <div>
-              <div className="text-sm font-medium">{p.name}</div>
-              <div className="text-xs text-muted mt-0.5">
-                {[p.client || leadName(p.lead_id), p.due_date ? `Due ${fmtDate(p.due_date)}` : null]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </div>
-            </div>
-            <Badge text={p.status} tone={TONE[p.status]} />
+      <div className="flex-1 flex flex-col">
+        {!active ? (
+          <div className="flex-1 flex items-center justify-center text-sm text-muted">
+            Select a conversation, or start a new one.
           </div>
-        ))}
-        {filtered.length === 0 && rows.length > 0 && (
-          <p className="text-sm text-muted py-6 text-center">No projects match "{query}".</p>
-        )}
-        {rows.length === 0 && (
-          <EmptyState text="No projects logged yet." actionLabel="Add project" onAction={() => setModal({})} />
+        ) : (
+          <>
+            <div className="px-4 py-3 border-b border-line font-medium text-sm text-ink">{active}</div>
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 bg-paper">
+              {thread.length === 0 && (
+                <p className="text-sm text-muted text-center mt-8">No messages yet — say hi!</p>
+              )}
+              {thread.map((m) => {
+                const mine = m.status === myEmail;
+                return (
+                  <div key={m.id} className={`flex flex-col ${mine ? "items-end" : "items-start"}`}>
+                    <div
+                      className={`max-w-xs sm:max-w-sm rounded-lg px-3 py-2 text-sm ${
+                        mine ? "bg-accent text-white" : "bg-white border border-line text-ink"
+                      }`}
+                    >
+                      {m.name ? (
+                        <img src={m.name} alt="Shared attachment" className="rounded max-w-full max-h-64 object-cover" />
+                      ) : (
+                        <p className="whitespace-pre-wrap break-words">{m.notes}</p>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-muted mt-1">{fmtTime(m.created_at)}</span>
+                  </div>
+                );
+              })}
+              <div ref={bottomRef} />
+            </div>
+
+            <form onSubmit={sendMessage} className="flex items-center gap-2 p-3 border-t border-line">
+              <input type="file" accept="image/*" ref={fileRef} onChange={sendImage} className="hidden" id="dm-image-input" />
+              <label
+                htmlFor="dm-image-input"
+                className="px-3 py-2 rounded border border-line cursor-pointer text-sm hover:bg-paper shrink-0"
+                title="Attach image"
+              >
+                📎
+              </label>
+              <input
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Type a message…"
+                className="flex-1"
+              />
+              <button
+                type="submit"
+                disabled={sending || !text.trim()}
+                className="px-4 py-2 rounded bg-accent text-white text-sm font-medium disabled:opacity-60 shrink-0"
+              >
+                Send
+              </button>
+            </form>
+          </>
         )}
       </div>
-
-      {modal && (
-        <Modal title={modal.id ? "Edit project" : "New project"} onClose={() => setModal(null)}>
-          <ProjectForm
-            initial={modal.id ? modal : null}
-            leads={leadsTable.rows}
-            onSave={async (data) => {
-              if (modal.id) await update(modal.id, data);
-              else await add(data);
-              setModal(null);
-            }}
-            onCancel={() => setModal(null)}
-            onDelete={
-              modal.id
-                ? async () => {
-                    await remove(modal.id);
-                    setModal(null);
-                  }
-                : null
-            }
-          />
-        </Modal>
-      )}
     </div>
   );
 }
