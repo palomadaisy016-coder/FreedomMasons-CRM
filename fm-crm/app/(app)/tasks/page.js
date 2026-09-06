@@ -21,7 +21,7 @@ function toLocalInputValue(iso) {
   )}`;
 }
 
-function TaskForm({ initial, projects, onSave, onCancel, onDelete }) {
+function TaskForm({ initial, onSave, onCancel, onDelete }) {
   const [f, setF] = useState(
     initial
       ? { ...initial, follow_up_at: toLocalInputValue(initial.follow_up_at) }
@@ -31,8 +31,6 @@ function TaskForm({ initial, projects, onSave, onCancel, onDelete }) {
           contact: "",
           email: "",
           company_name: "",
-          project_id: "",
-          assignee: "",
           follow_up_at: "",
           remarks: "",
         }
@@ -72,24 +70,9 @@ function TaskForm({ initial, projects, onSave, onCancel, onDelete }) {
           <input value={f.email} onChange={set("email")} />
         </Field>
       </div>
-      <Field label="Related project">
-        <select value={f.project_id || ""} onChange={set("project_id")}>
-          <option value="">None</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
+      <Field label="Follow-up date & time">
+        <input type="datetime-local" value={f.follow_up_at} onChange={set("follow_up_at")} />
       </Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Assignee">
-          <input value={f.assignee} onChange={set("assignee")} />
-        </Field>
-        <Field label="Follow-up date & time">
-          <input type="datetime-local" value={f.follow_up_at} onChange={set("follow_up_at")} />
-        </Field>
-      </div>
       <Field label="Remarks">
         <textarea rows={3} value={f.remarks} onChange={set("remarks")} />
       </Field>
@@ -114,7 +97,6 @@ function TaskForm({ initial, projects, onSave, onCancel, onDelete }) {
 
 export default function TasksPage() {
   const { rows, loading, add, update, remove } = useTable("tasks");
-  const projectsTable = useTable("projects");
   const [modal, setModal] = useState(null);
   const [query, setQuery] = useState("");
   const [notifStatus, setNotifStatus] = useState(
@@ -153,17 +135,12 @@ export default function TasksPage() {
     return () => clearInterval(interval);
   }, [rows, update]);
 
-  if (loading || projectsTable.loading) return <p className="text-sm text-muted">Loading…</p>;
+  if (loading) return <p className="text-sm text-muted">Loading…</p>;
 
-  const projectName = (id) => projectsTable.rows.find((p) => p.id === id)?.name || "";
   const q = query.trim().toLowerCase();
   const filtered = q
     ? rows.filter((t) =>
-        `${t.title} ${t.client_name || ""} ${t.company_name || ""} ${projectName(t.project_id)} ${
-          t.assignee || ""
-        }`
-          .toLowerCase()
-          .includes(q)
+        `${t.title} ${t.client_name || ""} ${t.company_name || ""}`.toLowerCase().includes(q)
       )
     : rows;
   const sorted = [...filtered].sort(
@@ -204,9 +181,7 @@ export default function TasksPage() {
             <div className="flex-1 min-w-0">
               <div className={`text-sm font-medium ${t.done ? "line-through" : ""}`}>{t.title}</div>
               <div className="text-xs text-muted mt-0.5">
-                {[t.client_name, t.company_name, projectName(t.project_id), t.assignee]
-                  .filter(Boolean)
-                  .join(" · ") || "Unassigned"}
+                {[t.client_name, t.company_name].filter(Boolean).join(" · ") || "No client set"}
               </div>
             </div>
             <span className="text-xs text-muted">{fmtDateTime(t.follow_up_at)}</span>
@@ -228,7 +203,6 @@ export default function TasksPage() {
         <Modal title={modal.id ? "Edit task" : "New task"} onClose={() => setModal(null)}>
           <TaskForm
             initial={modal.id ? modal : null}
-            projects={projectsTable.rows}
             onSave={async (data) => {
               if (modal.id) await update(modal.id, data);
               else await add(data);
