@@ -31,7 +31,13 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h1 className="text-lg font-semibold text-ink mb-4">Dashboard</h1>
+      <div className="bg-white border border-line rounded-lg px-6 py-6 mb-6 flex items-center gap-4">
+        <img src="/logo.png" alt="Company logo" className="h-12 w-auto" />
+        <div>
+          <h1 className="text-lg font-semibold text-ink">Freedom Masons CRM</h1>
+          <p className="text-sm text-muted">Leads, projects, invoices, and tasks in one place.</p>
+        </div>
+      </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
         <StatCard label="Open leads" value={openLeads} />
         <StatCard label="Active projects" value={activeProjects} />
