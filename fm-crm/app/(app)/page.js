@@ -1,9 +1,7 @@
 "use client";
-
 import Link from "next/link";
 import { useTable } from "@/lib/useTable";
 import { money, fmtDate } from "../components/ui";
-
 function StatCard({ label, value }) {
   return (
     <div className="bg-white border border-line rounded-lg p-4">
@@ -12,29 +10,25 @@ function StatCard({ label, value }) {
     </div>
   );
 }
-
 export default function DashboardPage() {
   const leads = useTable("leads");
   const projects = useTable("projects");
   const invoices = useTable("invoices");
   const tasks = useTable("tasks");
-
   const loading = leads.loading || projects.loading || invoices.loading || tasks.loading;
-  if (loading) return <p className="text-sm text-muted">Loading…</p>;
-
+  if (loading) return <p className="text-sm text-muted">Loading...</p>;
   const openLeads = leads.rows.filter((l) => !["Won", "Lost"].includes(l.stage)).length;
   const activeProjects = projects.rows.filter((p) => p.status !== "Complete").length;
   const outstanding = invoices.rows
     .filter((i) => i.status !== "Paid")
     .reduce((s, i) => s + Number(i.amount || 0), 0);
   const openTasks = tasks.rows.filter((t) => !t.done).length;
-
   return (
     <div>
       <div className="bg-white border border-line rounded-lg px-6 py-6 mb-6 flex items-center gap-4">
         <img src="/logo.png" alt="Company logo" className="h-12 w-auto" />
         <div>
-          <h1 className="text-lg font-semibold text-ink">Freedom Masons CRM</h1>
+          <h1 className="text-lg font-semibold text-ink">Outreach 360 CRM</h1>
           <p className="text-sm text-muted">Leads, projects, invoices, and tasks in one place.</p>
         </div>
       </div>
@@ -44,7 +38,6 @@ export default function DashboardPage() {
         <StatCard label="Outstanding invoices" value={money(outstanding)} />
         <StatCard label="Open tasks" value={openTasks} />
       </div>
-
       <div className="grid md:grid-cols-2 gap-6">
         <div>
           <div className="flex items-center justify-between mb-2">
