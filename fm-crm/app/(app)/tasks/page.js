@@ -1,11 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTable } from "@/lib/useTable";
-import { Modal, Field, PrimaryButton, GhostButton, EmptyState, fmtDate } from "../../components/ui";
+import { Modal, Field, PrimaryButton, GhostButton, EmptyState } from "../../components/ui";
 
-function TaskForm({ initial, projects, onSave, onCancel }) {
-  const [f, setF] = useState(initial || { title: "", project_id: "", assignee: "", due_date: "", done: false });
+function fmtDateTime(d) {
+  if (!d) return "—";
+  const dt = new Date(d);
+  if (isNaN(dt)) return d;
+  return dt.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+function toLocalInputValue(iso) {
+  if (!iso) return "";
+  const dt = new Date(iso);
+  if (isNaN(dt)) return "";
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(
+    dt.getMinutes()
+  )}`;
+}
+
+function TaskForm({ initial, projects, onSave, onCancel, onDelete }) {
+  const [f, setF] = useState(
+    initial
+      ? { ...initial, follow_up_at: toLocalInputValue(initial.follow_up_at) }
+      : {
+          title: "",
+          client_name: "",
+          contact: "",
+          email: "",
+          company_name: "",
+          project_id: "",
+          assignee: "",
+          follow_up_at: "",
+          remarks: "",
+        }
+  );
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
 
   return (
@@ -13,13 +44,34 @@ function TaskForm({ initial, projects, onSave, onCancel }) {
       onSubmit={(e) => {
         e.preventDefault();
         if (!f.title.trim()) return;
-        onSave(f);
+        const payload = {
+          ...f,
+          follow_up_at: f.follow_up_at ? new Date(f.follow_up_at).toISOString() : null,
+          notified: false,
+        };
+        onSave(payload);
       }}
       className="grid gap-3"
     >
-      <Field label="Task">
-        <input value={f.title} onChange={set("title")} required />
+      <Field label="Task title">
+        <input value={f.title} onChange={set("title")} required placeholder="Follow up call" />
       </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Client name">
+          <input value={f.client_name} onChange={set("client_name")} />
+        </Field>
+        <Field label="Company name">
+          <input value={f.company_name} onChange={set("company_name")} />
+        </Field>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Contact">
+          <input value={f.contact} onChange={set("contact")} placeholder="Phone" />
+        </Field>
+        <Field label="Email">
+          <input value={f.email} onChange={set("email")} />
+        </Field>
+      </div>
       <Field label="Related project">
         <select value={f.project_id || ""} onChange={set("project_id")}>
           <option value="">None</option>
@@ -34,15 +86,27 @@ function TaskForm({ initial, projects, onSave, onCancel }) {
         <Field label="Assignee">
           <input value={f.assignee} onChange={set("assignee")} />
         </Field>
-        <Field label="Due date">
-          <input type="date" value={f.due_date || ""} onChange={set("due_date")} />
+        <Field label="Follow-up date & time">
+          <input type="datetime-local" value={f.follow_up_at} onChange={set("follow_up_at")} />
         </Field>
       </div>
-      <div className="flex justify-end gap-2 mt-1">
-        <GhostButton type="button" onClick={onCancel}>
-          Cancel
-        </GhostButton>
-        <PrimaryButton type="submit">Save</PrimaryButton>
+      <Field label="Remarks">
+        <textarea rows={3} value={f.remarks} onChange={set("remarks")} />
+      </Field>
+      <div className="flex justify-between items-center mt-1">
+        {onDelete ? (
+          <button type="button" onClick={onDelete} className="text-danger text-sm">
+            Delete
+          </button>
+        ) : (
+          <span />
+        )}
+        <div className="flex gap-2">
+          <GhostButton type="button" onClick={onCancel}>
+            Cancel
+          </GhostButton>
+          <PrimaryButton type="submit">Save</PrimaryButton>
+        </div>
       </div>
     </form>
   );
@@ -53,6 +117,41 @@ export default function TasksPage() {
   const projectsTable = useTable("projects");
   const [modal, setModal] = useState(null);
   const [query, setQuery] = useState("");
+  const [notifStatus, setNotifStatus] = useState(
+    typeof Notification !== "undefined" ? Notification.permission : "unsupported"
+  );
+  const checkedRef = useRef(new Set());
+
+  useEffect(() => {
+    if (typeof Notification === "undefined") return;
+    if (Notification.permission === "default") {
+      Notification.requestPermission().then(setNotifStatus);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof Notification === "undefined") return;
+    const interval = setInterval(() => {
+      if (Notification.permission !== "granted") return;
+      const now = Date.now();
+      rows.forEach((t) => {
+        if (
+          !t.done &&
+          !t.notified &&
+          t.follow_up_at &&
+          new Date(t.follow_up_at).getTime() <= now &&
+          !checkedRef.current.has(t.id)
+        ) {
+          checkedRef.current.add(t.id);
+          new Notification("Follow-up time", {
+            body: `Time to follow up with ${t.client_name || t.title}`,
+          });
+          update(t.id, { notified: true });
+        }
+      });
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [rows, update]);
 
   if (loading || projectsTable.loading) return <p className="text-sm text-muted">Loading…</p>;
 
@@ -60,11 +159,15 @@ export default function TasksPage() {
   const q = query.trim().toLowerCase();
   const filtered = q
     ? rows.filter((t) =>
-        `${t.title} ${projectName(t.project_id)} ${t.assignee || ""}`.toLowerCase().includes(q)
+        `${t.title} ${t.client_name || ""} ${t.company_name || ""} ${projectName(t.project_id)} ${
+          t.assignee || ""
+        }`
+          .toLowerCase()
+          .includes(q)
       )
     : rows;
   const sorted = [...filtered].sort(
-    (a, b) => Number(a.done) - Number(b.done) || (a.due_date || "").localeCompare(b.due_date || "")
+    (a, b) => Number(a.done) - Number(b.done) || (a.follow_up_at || "").localeCompare(b.follow_up_at || "")
   );
 
   return (
@@ -82,6 +185,13 @@ export default function TasksPage() {
         </div>
       </div>
 
+      {notifStatus === "denied" && (
+        <p className="text-xs text-danger mb-3">
+          Browser notifications are blocked for this site — enable them in your browser's site settings to get
+          follow-up alerts.
+        </p>
+      )}
+
       <div className="grid gap-2">
         {sorted.map((t) => (
           <div
@@ -94,10 +204,12 @@ export default function TasksPage() {
             <div className="flex-1 min-w-0">
               <div className={`text-sm font-medium ${t.done ? "line-through" : ""}`}>{t.title}</div>
               <div className="text-xs text-muted mt-0.5">
-                {[projectName(t.project_id), t.assignee].filter(Boolean).join(" · ") || "Unassigned"}
+                {[t.client_name, t.company_name, projectName(t.project_id), t.assignee]
+                  .filter(Boolean)
+                  .join(" · ") || "Unassigned"}
               </div>
             </div>
-            <span className="text-xs text-muted">{fmtDate(t.due_date)}</span>
+            <span className="text-xs text-muted">{fmtDateTime(t.follow_up_at)}</span>
             <button onClick={() => setModal(t)} className="text-xs text-accent">
               Edit
             </button>
@@ -123,6 +235,14 @@ export default function TasksPage() {
               setModal(null);
             }}
             onCancel={() => setModal(null)}
+            onDelete={
+              modal.id
+                ? async () => {
+                    await remove(modal.id);
+                    setModal(null);
+                  }
+                : null
+            }
           />
         </Modal>
       )}
