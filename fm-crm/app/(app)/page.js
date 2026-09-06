@@ -1,6 +1,8 @@
 "use client";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useTable } from "@/lib/useTable";
+import { createClient } from "@/lib/supabase/client";
 import { money, fmtDate } from "../components/ui";
 function StatCard({ label, value }) {
   return (
@@ -10,20 +12,51 @@ function StatCard({ label, value }) {
     </div>
   );
 }
+function readKey(me, other) {
+  return `unread_last_read::${me}::${other}`;
+}
 export default function DashboardPage() {
+  const supabase = createClient();
+  const [myEmail, setMyEmail] = useState(null);
   const leads = useTable("leads");
   const projects = useTable("projects");
   const invoices = useTable("invoices");
   const tasks = useTable("tasks");
   const loading = leads.loading || projects.loading || invoices.loading || tasks.loading;
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setMyEmail(data.user?.email || null));
+  }, []);
+
   if (loading) return <p className="text-sm text-muted">Loading...</p>;
   const openLeads = leads.rows.filter((l) => !["Won", "Lost"].includes(l.stage)).length;
-  const activeProjects = projects.rows.filter((p) => p.status !== "Complete").length;
   const currentYear = new Date().getFullYear();
   const yearlySales = invoices.rows
     .filter((i) => i.issue_date && Number(i.issue_date.slice(0, 4)) === currentYear)
     .reduce((s, i) => s + Number(i.amount || 0), 0);
   const openTasks = tasks.rows.filter((t) => !t.done).length;
+
+  const incoming = myEmail
+    ? projects.rows
+        .filter((m) => m.client && m.client.split("::").includes(myEmail) && m.status !== myEmail)
+        .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
+    : [];
+  const latest = incoming[0];
+
+  let unreadCount = 0;
+  if (myEmail && typeof window !== "undefined") {
+    const otherPartners = Array.from(
+      new Set(incoming.map((m) => m.client.split("::").find((p) => p !== myEmail)))
+    );
+    otherPartners.forEach((other) => {
+      const readAt = localStorage.getItem(readKey(myEmail, other));
+      const unreadFromThem = incoming.filter(
+        (m) => m.client.split("::").includes(other) && (!readAt || m.created_at > readAt)
+      );
+      unreadCount += unreadFromThem.length;
+    });
+  }
+
   return (
     <div>
       <div className="bg-white border border-line rounded-lg px-6 py-6 mb-6 flex items-center gap-4">
@@ -35,7 +68,19 @@ export default function DashboardPage() {
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
         <StatCard label="Open leads" value={openLeads} />
-        <StatCard label="Active projects" value={activeProjects} />
+        <Link href="/projects" className="block">
+          <div className="bg-white border border-line rounded-lg p-4 hover:border-accent cursor-pointer relative">
+            {unreadCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-danger text-white text-xs font-semibold rounded-full h-5 min-w-5 px-1 flex items-center justify-center">
+                {unreadCount}
+              </span>
+            )}
+            <div className="text-xs text-muted mb-1">Messages</div>
+            <div className="text-sm font-semibold text-ink">
+              {latest ? `You got a text from ${latest.status}` : "No new messages"}
+            </div>
+          </div>
+        </Link>
         <StatCard label={`Yearly sales (${currentYear})`} value={money(yearlySales)} />
         <StatCard label="Open tasks" value={openTasks} />
       </div>
