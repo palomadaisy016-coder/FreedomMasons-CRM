@@ -72,8 +72,9 @@ export default function ChatsPage() {
   }, [thread.length, active]);
 
   const openChat = (email) => {
-    if (!email || email === myEmail) return;
-    setActive(email);
+    const clean = (email || "").trim().toLowerCase();
+    if (!clean || clean === myEmail?.toLowerCase()) return;
+    setActive(clean);
     setNewEmail("");
   };
 
@@ -117,14 +118,20 @@ export default function ChatsPage() {
   return (
     <div className="flex h-[calc(100vh-140px)] border border-line rounded-lg overflow-hidden">
       <div className="w-64 border-r border-line bg-paper flex flex-col shrink-0">
-        <div className="p-3 border-b border-line">
+        <div className="p-3 border-b border-line flex flex-col gap-2">
           <input
             value={newEmail}
             onChange={(e) => setNewEmail(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && openChat(newEmail.trim())}
-            placeholder="Start chat: teammate's email"
+            onKeyDown={(e) => e.key === "Enter" && openChat(newEmail)}
+            placeholder="Teammate's email"
             className="w-full text-sm"
           />
+          <button
+            onClick={() => openChat(newEmail)}
+            className="w-full px-3 py-1.5 rounded bg-accent text-white text-sm font-medium"
+          >
+            Start chat
+          </button>
         </div>
         <div className="flex-1 overflow-y-auto">
           {conversations.length === 0 && (
