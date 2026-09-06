@@ -19,8 +19,9 @@ export default function DashboardPage() {
   if (loading) return <p className="text-sm text-muted">Loading...</p>;
   const openLeads = leads.rows.filter((l) => !["Won", "Lost"].includes(l.stage)).length;
   const activeProjects = projects.rows.filter((p) => p.status !== "Complete").length;
-  const outstanding = invoices.rows
-    .filter((i) => i.status !== "Paid")
+  const currentYear = new Date().getFullYear();
+  const yearlySales = invoices.rows
+    .filter((i) => i.issue_date && Number(i.issue_date.slice(0, 4)) === currentYear)
     .reduce((s, i) => s + Number(i.amount || 0), 0);
   const openTasks = tasks.rows.filter((t) => !t.done).length;
   return (
@@ -29,13 +30,13 @@ export default function DashboardPage() {
         <img src="/logo.png" alt="Company logo" className="h-12 w-auto" />
         <div>
           <h1 className="text-lg font-semibold text-ink">Outreach 360 CRM</h1>
-          <p className="text-sm text-muted">Leads, projects, invoices, and tasks in one place.</p>
+          <p className="text-sm text-muted">Leads, projects, sales, and tasks in one place.</p>
         </div>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
         <StatCard label="Open leads" value={openLeads} />
         <StatCard label="Active projects" value={activeProjects} />
-        <StatCard label="Outstanding invoices" value={money(outstanding)} />
+        <StatCard label={`Yearly sales (${currentYear})`} value={money(yearlySales)} />
         <StatCard label="Open tasks" value={openTasks} />
       </div>
       <div className="grid md:grid-cols-2 gap-6">
