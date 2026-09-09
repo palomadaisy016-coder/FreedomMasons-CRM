@@ -78,36 +78,44 @@ export default function LeadsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4 gap-3">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3">
         <h1 className="text-lg font-semibold text-ink">Leads</h1>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search leads…"
-            className="w-56"
+            className="w-full sm:w-56"
           />
-          <PrimaryButton onClick={() => setModal({})}>Add lead</PrimaryButton>
+          <PrimaryButton onClick={() => setModal({})} className="whitespace-nowrap">
+            Add lead
+          </PrimaryButton>
         </div>
       </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-2">
+      <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 snap-x snap-mandatory sm:snap-none">
         {STAGES.map((stage) => {
           const items = filtered.filter((l) => l.stage === stage);
           return (
-            <div key={stage} className="min-w-[210px] flex-shrink-0">
-              <div className="text-xs font-semibold text-muted uppercase tracking-wide mb-2 pb-1 border-b border-line">
+            <div
+              key={stage}
+              className="min-w-[80vw] sm:min-w-[210px] flex-shrink-0 snap-start"
+            >
+              <div className="text-xs font-semibold text-muted uppercase tracking-wide mb-2 pb-1 border-b border-line whitespace-nowrap">
                 {stage} ({items.length})
               </div>
               <div className="grid gap-2">
+                {items.length === 0 && (
+                  <p className="text-xs text-muted py-2">No leads in this stage.</p>
+                )}
                 {items.map((l) => (
                   <div
                     key={l.id}
                     onClick={() => setModal(l)}
                     className="bg-white border border-line rounded-lg px-3 py-2 cursor-pointer hover:border-accent"
                   >
-                    <div className="text-sm font-medium">{l.name}</div>
-                    {l.company && <div className="text-xs text-muted">{l.company}</div>}
+                    <div className="text-sm font-medium truncate">{l.name}</div>
+                    {l.company && <div className="text-xs text-muted truncate">{l.company}</div>}
                   </div>
                 ))}
               </div>
