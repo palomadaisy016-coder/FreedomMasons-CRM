@@ -24,29 +24,29 @@ export default function NavBar({ email }) {
   };
   return (
     <div className="border-b border-line bg-white">
-      <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="Company logo" className="h-7 w-auto" />
-            <span className="font-semibold text-ink">Outreach 360 CRM</span>
-          </div>
-          <nav className="flex gap-1">
-            {links.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className={`px-3 py-1.5 rounded text-sm ${
-                  pathname === l.href ? "bg-ink text-white" : "text-muted hover:bg-paper"
-                }`}
-              >
-                {l.label}
-              </Link>
-            ))}
-          </nav>
+      <div className="max-w-7xl mx-auto px-6 py-3 flex flex-wrap items-center justify-between gap-y-3">
+        <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
+          <img src="/logo.png" alt="Company logo" className="h-7 w-auto" />
+          <span className="font-semibold text-ink whitespace-nowrap">Outreach 360 CRM</span>
         </div>
-        <div className="flex items-center gap-3 text-sm text-muted">
-          <span>{email}</span>
-          <button onClick={signOut} className="px-3 py-1.5 rounded border border-line hover:bg-paper">
+
+        <nav className="flex flex-wrap items-center gap-1 flex-1 justify-center min-w-0">
+          {links.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className={`px-3 py-1.5 rounded text-sm whitespace-nowrap ${
+                pathname === l.href ? "bg-ink text-white" : "text-muted hover:bg-paper"
+              }`}
+            >
+              {l.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="flex items-center gap-3 text-sm text-muted shrink-0 whitespace-nowrap">
+          <span className="hidden md:inline">{email}</span>
+          <button onClick={signOut} className="px-3 py-1.5 rounded border border-line hover:bg-paper whitespace-nowrap">
             Sign out
           </button>
         </div>
