@@ -48,9 +48,9 @@ function SaleForm({ initial, onSave, onCancel, onDelete }) {
       <Field label="Agent name">
         <input value={f.client} onChange={set("client")} required />
       </Field>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Month">
-          <select value={f.month} onChange={set("month")}>
+          <select value={f.month} onChange={set("month")} className="w-full">
             {MONTHS.map((m, i) => (
               <option key={m} value={i}>
                 {m}
@@ -59,7 +59,7 @@ function SaleForm({ initial, onSave, onCancel, onDelete }) {
           </select>
         </Field>
         <Field label="Year">
-          <input type="number" value={f.year} onChange={set("year")} required />
+          <input type="number" value={f.year} onChange={set("year")} required className="w-full" />
         </Field>
       </div>
       <Field label="Sales amount">
@@ -114,23 +114,25 @@ export default function SalesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4 gap-3">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3">
         <h1 className="text-lg font-semibold text-ink">Sales</h1>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search agent…"
-            className="w-56"
+            className="w-full sm:w-56"
           />
-          <select value={year} onChange={(e) => setYear(e.target.value)} className="w-28">
+          <select value={year} onChange={(e) => setYear(e.target.value)} className="w-full sm:w-28">
             {years.map((y) => (
               <option key={y} value={y}>
                 {y}
               </option>
             ))}
           </select>
-          <PrimaryButton onClick={() => setModal({})}>Add sale</PrimaryButton>
+          <PrimaryButton onClick={() => setModal({})} className="whitespace-nowrap">
+            Add sale
+          </PrimaryButton>
         </div>
       </div>
 
@@ -138,43 +140,44 @@ export default function SalesPage() {
         <EmptyState text={`No sales recorded for ${year} yet.`} actionLabel="Add sale" onAction={() => setModal({})} />
       ) : (
         <div className="overflow-x-auto mb-8 border border-line rounded-lg">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[900px]">
             <thead>
               <tr className="bg-paper text-left">
-                <th className="px-3 py-2 font-medium text-ink">Agent</th>
+                <th className="px-3 py-2 font-medium text-ink whitespace-nowrap">Agent</th>
                 {MONTHS.map((m) => (
                   <th key={m} className="px-3 py-2 font-medium text-muted text-right whitespace-nowrap">
                     {m.slice(0, 3)}
                   </th>
                 ))}
-                <th className="px-3 py-2 font-medium text-ink text-right">Total</th>
+                <th className="px-3 py-2 font-medium text-ink text-right whitespace-nowrap">Total</th>
               </tr>
             </thead>
             <tbody>
               {agents.map((a) => (
                 <tr key={a} className="border-t border-line">
-                  <td className="px-3 py-2 font-medium">{a}</td>
+                  <td className="px-3 py-2 font-medium whitespace-nowrap">{a}</td>
                   {MONTHS.map((_, i) => (
-                    <td key={i} className="px-3 py-2 text-right text-muted">
+                    <td key={i} className="px-3 py-2 text-right text-muted whitespace-nowrap">
                       {cell(a, i) ? money(cell(a, i)) : "—"}
                     </td>
                   ))}
-                  <td className="px-3 py-2 text-right font-semibold text-ink">{money(agentTotal(a))}</td>
+                  <td className="px-3 py-2 text-right font-semibold text-ink whitespace-nowrap">{money(agentTotal(a))}</td>
                 </tr>
               ))}
               <tr className="border-t border-line bg-paper">
-                <td className="px-3 py-2 font-semibold text-ink">Total</td>
+                <td className="px-3 py-2 font-semibold text-ink whitespace-nowrap">Total</td>
                 {MONTHS.map((_, i) => (
-                  <td key={i} className="px-3 py-2 text-right font-medium text-ink">
+                  <td key={i} className="px-3 py-2 text-right font-medium text-ink whitespace-nowrap">
                     {monthTotal(i) ? money(monthTotal(i)) : "—"}
                   </td>
                 ))}
-                <td className="px-3 py-2 text-right font-semibold text-ink">{money(grandTotal)}</td>
+                <td className="px-3 py-2 text-right font-semibold text-ink whitespace-nowrap">{money(grandTotal)}</td>
               </tr>
             </tbody>
           </table>
         </div>
       )}
+      <p className="text-xs text-muted sm:hidden -mt-6 mb-6">Swipe the table sideways to see all months.</p>
 
       <h2 className="text-sm font-semibold text-ink mb-2">All entries</h2>
       <div className="grid gap-2">
@@ -193,15 +196,15 @@ export default function SalesPage() {
                   year: yearOf(r.issue_date),
                 })
               }
-              className="bg-white border border-line rounded-lg px-4 py-3 flex items-center justify-between cursor-pointer hover:border-accent"
+              className="bg-white border border-line rounded-lg px-4 py-3 flex items-center justify-between gap-3 cursor-pointer hover:border-accent"
             >
-              <div>
-                <div className="text-sm font-medium">{r.client}</div>
+              <div className="min-w-0">
+                <div className="text-sm font-medium truncate">{r.client}</div>
                 <div className="text-xs text-muted mt-0.5">
                   {MONTHS[monthIndexOf(r.issue_date)]} {yearOf(r.issue_date)}
                 </div>
               </div>
-              <span className="text-sm font-medium">{money(r.amount)}</span>
+              <span className="text-sm font-medium shrink-0">{money(r.amount)}</span>
             </div>
           ))}
         {yearRows.length === 0 && <p className="text-sm text-muted py-4">No entries for {year} yet.</p>}
