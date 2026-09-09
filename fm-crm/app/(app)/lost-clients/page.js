@@ -31,7 +31,7 @@ function LostClientForm({ initial, onSave, onCancel, onDelete }) {
       <Field label="Client name">
         <input value={f.client_name} onChange={set("client_name")} required />
       </Field>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Contact">
           <input value={f.contact} onChange={set("contact")} placeholder="Phone" />
         </Field>
@@ -39,7 +39,7 @@ function LostClientForm({ initial, onSave, onCancel, onDelete }) {
           <input value={f.email} onChange={set("email")} />
         </Field>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Company name">
           <input value={f.company_name} onChange={set("company_name")} />
         </Field>
@@ -47,12 +47,12 @@ function LostClientForm({ initial, onSave, onCancel, onDelete }) {
           <input value={f.website} onChange={set("website")} placeholder="https://" />
         </Field>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Project name">
           <input value={f.project_name} onChange={set("project_name")} />
         </Field>
         <Field label="Date">
-          <input type="date" value={f.lost_date || ""} onChange={set("lost_date")} />
+          <input type="date" value={f.lost_date || ""} onChange={set("lost_date")} className="w-full" />
         </Field>
       </div>
       <Field label="Remarks">
@@ -93,16 +93,18 @@ export default function LostClientsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4 gap-3">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3">
         <h1 className="text-lg font-semibold text-ink">Lost Clients</h1>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search lost clients…"
-            className="w-56"
+            className="w-full sm:w-56"
           />
-          <PrimaryButton onClick={() => setModal({})}>Add lost client</PrimaryButton>
+          <PrimaryButton onClick={() => setModal({})} className="whitespace-nowrap">
+            Add lost client
+          </PrimaryButton>
         </div>
       </div>
 
@@ -113,11 +115,11 @@ export default function LostClientsPage() {
             onClick={() => setModal(c)}
             className="bg-white border border-line rounded-lg px-4 py-3 cursor-pointer hover:border-accent"
           >
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-medium">{c.client_name}</div>
-              {c.lost_date && <span className="text-xs text-muted">{fmtDate(c.lost_date)}</span>}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-2">
+              <div className="text-sm font-medium truncate">{c.client_name}</div>
+              {c.lost_date && <span className="text-xs text-muted shrink-0">{fmtDate(c.lost_date)}</span>}
             </div>
-            <div className="text-xs text-muted mt-0.5">
+            <div className="text-xs text-muted mt-0.5 truncate">
               {[c.company_name, c.project_name].filter(Boolean).join(" · ")}
             </div>
           </div>
