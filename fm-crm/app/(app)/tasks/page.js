@@ -54,7 +54,7 @@ function TaskForm({ initial, onSave, onCancel, onDelete }) {
       <Field label="Task title">
         <input value={f.title} onChange={set("title")} required placeholder="Follow up call" />
       </Field>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Client name">
           <input value={f.client_name} onChange={set("client_name")} />
         </Field>
@@ -62,7 +62,7 @@ function TaskForm({ initial, onSave, onCancel, onDelete }) {
           <input value={f.company_name} onChange={set("company_name")} />
         </Field>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Contact">
           <input value={f.contact} onChange={set("contact")} placeholder="Phone" />
         </Field>
@@ -71,7 +71,7 @@ function TaskForm({ initial, onSave, onCancel, onDelete }) {
         </Field>
       </div>
       <Field label="Follow-up date & time">
-        <input type="datetime-local" value={f.follow_up_at} onChange={set("follow_up_at")} />
+        <input type="datetime-local" value={f.follow_up_at} onChange={set("follow_up_at")} className="w-full" />
       </Field>
       <Field label="Remarks">
         <textarea rows={3} value={f.remarks} onChange={set("remarks")} />
@@ -149,16 +149,18 @@ export default function TasksPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4 gap-3">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3">
         <h1 className="text-lg font-semibold text-ink">Tasks</h1>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search tasks…"
-            className="w-56"
+            className="w-full sm:w-56"
           />
-          <PrimaryButton onClick={() => setModal({})}>Add task</PrimaryButton>
+          <PrimaryButton onClick={() => setModal({})} className="whitespace-nowrap">
+            Add task
+          </PrimaryButton>
         </div>
       </div>
 
@@ -173,24 +175,35 @@ export default function TasksPage() {
         {sorted.map((t) => (
           <div
             key={t.id}
-            className={`bg-white border border-line rounded-lg px-4 py-3 flex items-center gap-3 ${
+            className={`bg-white border border-line rounded-lg px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 ${
               t.done ? "opacity-60" : ""
             }`}
           >
-            <input type="checkbox" checked={!!t.done} onChange={() => update(t.id, { done: !t.done })} />
-            <div className="flex-1 min-w-0">
-              <div className={`text-sm font-medium ${t.done ? "line-through" : ""}`}>{t.title}</div>
-              <div className="text-xs text-muted mt-0.5">
-                {[t.client_name, t.company_name].filter(Boolean).join(" · ") || "No client set"}
+            <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+              <input
+                type="checkbox"
+                checked={!!t.done}
+                onChange={() => update(t.id, { done: !t.done })}
+                className="mt-1 sm:mt-0 shrink-0"
+              />
+              <div className="min-w-0 flex-1">
+                <div className={`text-sm font-medium break-words ${t.done ? "line-through" : ""}`}>{t.title}</div>
+                <div className="text-xs text-muted mt-0.5 truncate">
+                  {[t.client_name, t.company_name].filter(Boolean).join(" · ") || "No client set"}
+                </div>
               </div>
             </div>
-            <span className="text-xs text-muted">{fmtDateTime(t.follow_up_at)}</span>
-            <button onClick={() => setModal(t)} className="text-xs text-accent">
-              Edit
-            </button>
-            <button onClick={() => remove(t.id)} className="text-xs text-muted">
-              Remove
-            </button>
+            <div className="flex items-center justify-between sm:justify-end gap-3 pl-7 sm:pl-0 shrink-0">
+              <span className="text-xs text-muted whitespace-nowrap">{fmtDateTime(t.follow_up_at)}</span>
+              <div className="flex items-center gap-3">
+                <button onClick={() => setModal(t)} className="text-xs text-accent">
+                  Edit
+                </button>
+                <button onClick={() => remove(t.id)} className="text-xs text-muted">
+                  Remove
+                </button>
+              </div>
+            </div>
           </div>
         ))}
         {filtered.length === 0 && rows.length > 0 && (
