@@ -267,16 +267,13 @@ export default function ChatsPage() {
                       ) : m.file_type === "voice" ? (
                         <audio controls src={m.name} className="max-w-full" />
                       ) : m.file_type === "file" ? (
-                        
-                          href={m.name}
-                          download={m.file_name}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={`flex items-center gap-2 underline ${mine ? "text-white" : "text-accent"}`}
+                        <div
+                          onClick={() => window.open(m.name, "_blank", "noopener,noreferrer")}
+                          className={`flex items-center gap-2 underline cursor-pointer ${mine ? "text-white" : "text-accent"}`}
                         >
                           <span>{fileIcon(m.file_name)}</span>
                           <span className="truncate">{m.file_name || "Download file"}</span>
-                        </a>
+                        </div>
                       ) : m.name ? (
                         <img src={m.name} alt="Shared attachment" className="rounded max-w-full max-h-64 object-cover" />
                       ) : (
