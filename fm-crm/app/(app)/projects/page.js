@@ -26,6 +26,23 @@ function markRead(me, other) {
   localStorage.setItem(readKey(me, other), new Date().toISOString());
 }
 
+// Guess file type category from mime/extension for rendering + icon
+function fileKind(name) {
+  const ext = (name || "").split(".").pop()?.toLowerCase();
+  if (["png", "jpg", "jpeg", "gif", "webp"].includes(ext)) return "image";
+  if (["mp3", "wav", "webm", "m4a", "ogg"].includes(ext)) return "voice";
+  return "file";
+}
+
+function fileIcon(name) {
+  const ext = (name || "").split(".").pop()?.toLowerCase();
+  if (ext === "pdf") return "📄";
+  if (["doc", "docx"].includes(ext)) return "📝";
+  if (["xls", "xlsx", "csv"].includes(ext)) return "📊";
+  if (["ppt", "pptx"].includes(ext)) return "📽️";
+  return "📎";
+}
+
 export default function ChatsPage() {
   const supabase = createClient();
   const [me, setMe] = useState(null);
@@ -37,6 +54,11 @@ export default function ChatsPage() {
   const [sending, setSending] = useState(false);
   const fileRef = useRef(null);
   const bottomRef = useRef(null);
+
+  // Voice recording state
+  const [recording, setRecording] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setMe(data.user));
@@ -112,24 +134,63 @@ export default function ChatsPage() {
     setSending(false);
   };
 
-  const sendImage = async (e) => {
-    const file = e.target.files?.[0];
+  // Unified uploader for images, documents, and voice notes
+  const uploadAndSend = async (file, kindOverride) => {
     if (!file || !active) return;
     setSending(true);
     const path = `${Date.now()}-${file.name}`;
     const { error: uploadError } = await supabase.storage.from("chat-images").upload(path, file);
     if (!uploadError) {
       const { data } = supabase.storage.from("chat-images").getPublicUrl(path);
+      const kind = kindOverride || fileKind(file.name);
       await supabase.from("projects").insert({
         name: data.publicUrl,
         client: convKey(myEmail, active),
         notes: "",
         status: myEmail,
         created_by: me?.id || null,
+        file_type: kind,
+        file_name: file.name,
       });
     }
     setSending(false);
+  };
+
+  const sendFile = async (e) => {
+    const file = e.target.files?.[0];
+    await uploadAndSend(file);
     if (fileRef.current) fileRef.current.value = "";
+  };
+
+  // Voice recording handlers
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        const file = new File([blob], `voice-${Date.now()}.webm`, { type: "audio/webm" });
+        stream.getTracks().forEach((t) => t.stop());
+        await uploadAndSend(file, "voice");
+      };
+
+      mediaRecorder.start();
+      setRecording(true);
+    } catch (err) {
+      alert("Microphone access is needed to record a voice message.");
+    }
+  };
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+    setRecording(false);
   };
 
   if (loading) return <p className="text-sm text-muted">Loading…</p>;
@@ -167,7 +228,13 @@ export default function ChatsPage() {
               <div className="min-w-0">
                 <div className="truncate">{c.other}</div>
                 <div className="text-xs text-muted truncate">
-                  {c.last?.name ? "📷 Image" : c.last?.notes || ""}
+                  {c.last?.file_type === "image"
+                    ? "📷 Image"
+                    : c.last?.file_type === "voice"
+                    ? "🎤 Voice message"
+                    : c.last?.file_type === "file"
+                    ? `📎 ${c.last?.file_name || "File"}`
+                    : c.last?.notes || ""}
                 </div>
               </div>
               {c.unread && active !== c.other && (
@@ -199,7 +266,23 @@ export default function ChatsPage() {
                         mine ? "bg-accent text-white" : "bg-white border border-line text-ink"
                       }`}
                     >
-                      {m.name ? (
+                      {m.file_type === "image" ? (
+                        <img src={m.name} alt="Shared attachment" className="rounded max-w-full max-h-64 object-cover" />
+                      ) : m.file_type === "voice" ? (
+                        <audio controls src={m.name} className="max-w-full" />
+                      ) : m.file_type === "file" ? (
+                        
+                          href={m.name}
+                          download={m.file_name}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`flex items-center gap-2 underline ${mine ? "text-white" : "text-accent"}`}
+                        >
+                          <span>{fileIcon(m.file_name)}</span>
+                          <span className="truncate">{m.file_name || "Download file"}</span>
+                        </a>
+                      ) : m.name ? (
+                        // Legacy rows saved before file_type existed — assume image
                         <img src={m.name} alt="Shared attachment" className="rounded max-w-full max-h-64 object-cover" />
                       ) : (
                         <p className="whitespace-pre-wrap break-words">{m.notes}</p>
@@ -213,14 +296,33 @@ export default function ChatsPage() {
             </div>
 
             <form onSubmit={sendMessage} className="flex items-center gap-2 p-3 border-t border-line">
-              <input type="file" accept="image/*" ref={fileRef} onChange={sendImage} className="hidden" id="dm-image-input" />
+              <input
+                type="file"
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx"
+                ref={fileRef}
+                onChange={sendFile}
+                className="hidden"
+                id="dm-file-input"
+              />
               <label
-                htmlFor="dm-image-input"
+                htmlFor="dm-file-input"
                 className="px-3 py-2 rounded border border-line cursor-pointer text-sm hover:bg-paper shrink-0"
-                title="Attach image"
+                title="Attach file"
               >
                 📎
               </label>
+
+              <button
+                type="button"
+                onClick={recording ? stopRecording : startRecording}
+                className={`px-3 py-2 rounded border text-sm shrink-0 ${
+                  recording ? "bg-danger text-white border-danger animate-pulse" : "border-line hover:bg-paper"
+                }`}
+                title={recording ? "Stop recording" : "Record voice message"}
+              >
+                {recording ? "⏹️" : "🎤"}
+              </button>
+
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
