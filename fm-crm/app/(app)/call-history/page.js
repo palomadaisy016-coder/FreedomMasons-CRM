@@ -86,22 +86,22 @@ export default function CallHistoryPage() {
       <h1 className="text-lg font-semibold text-ink">Yearly Calling History</h1>
 
       <div className="flex flex-wrap gap-3 items-end">
-        <div>
+        <div className="w-full sm:w-auto">
           <label className="block text-xs text-muted mb-1">Search employee</label>
           <input
             value={searchName}
             onChange={(e) => setSearchName(e.target.value)}
             placeholder="Employee name…"
-            className="text-sm"
+            className="text-sm w-full sm:w-auto"
           />
         </div>
-        <div>
+        <div className="w-full sm:w-auto">
           <label className="block text-xs text-muted mb-1">Filter by date</label>
           <input
             type="date"
             value={filterDate}
             onChange={(e) => setFilterDate(e.target.value)}
-            className="text-sm"
+            className="text-sm w-full sm:w-auto"
           />
         </div>
         {(searchName || filterDate) && (
@@ -119,40 +119,40 @@ export default function CallHistoryPage() {
 
       {canEdit && (
         <form onSubmit={submit} className="flex flex-wrap gap-3 items-end border border-line rounded-lg p-3 bg-paper">
-          <div>
+          <div className="w-full sm:w-auto">
             <label className="block text-xs text-muted mb-1">Date</label>
             <input
               type="date"
               required
               value={form.calling_date}
               onChange={(e) => setForm({ ...form, calling_date: e.target.value })}
-              className="text-sm"
+              className="text-sm w-full sm:w-auto"
             />
           </div>
-          <div>
+          <div className="w-full sm:w-auto sm:flex-1 sm:min-w-[160px]">
             <label className="block text-xs text-muted mb-1">Employee</label>
             <input
               required
               value={form.employee_name}
               onChange={(e) => setForm({ ...form, employee_name: e.target.value })}
               placeholder="Employee name"
-              className="text-sm"
+              className="text-sm w-full"
             />
           </div>
-          <div>
+          <div className="w-full sm:w-28">
             <label className="block text-xs text-muted mb-1">Calls made</label>
             <input
               required
               value={form.calls_made}
               onChange={(e) => setForm({ ...form, calls_made: e.target.value })}
               placeholder="e.g. 45"
-              className="text-sm w-28"
+              className="text-sm w-full"
             />
           </div>
           <button
             type="submit"
             disabled={saving}
-            className="px-4 py-2 rounded bg-accent text-white text-sm font-medium disabled:opacity-60"
+            className="w-full sm:w-auto px-4 py-2 rounded bg-accent text-white text-sm font-medium disabled:opacity-60"
           >
             {editingId ? "Update entry" : "Add entry"}
           </button>
@@ -164,14 +164,14 @@ export default function CallHistoryPage() {
         </form>
       )}
 
-      <div className="border border-line rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="border border-line rounded-lg overflow-x-auto">
+        <table className="w-full text-sm min-w-[480px]">
           <thead className="bg-paper border-b border-line">
             <tr>
-              <th className="text-left px-3 py-2 font-medium text-ink">Date</th>
-              <th className="text-left px-3 py-2 font-medium text-ink">Employee</th>
-              <th className="text-left px-3 py-2 font-medium text-ink">Calls Made</th>
-              {canEdit && <th className="text-left px-3 py-2 font-medium text-ink">Actions</th>}
+              <th className="text-left px-3 py-2 font-medium text-ink whitespace-nowrap">Date</th>
+              <th className="text-left px-3 py-2 font-medium text-ink whitespace-nowrap">Employee</th>
+              <th className="text-left px-3 py-2 font-medium text-ink whitespace-nowrap">Calls Made</th>
+              {canEdit && <th className="text-left px-3 py-2 font-medium text-ink whitespace-nowrap">Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -184,17 +184,19 @@ export default function CallHistoryPage() {
             )}
             {filtered.map((r) => (
               <tr key={r.id} className="border-b border-line last:border-0">
-                <td className="px-3 py-2">{r.calling_date}</td>
-                <td className="px-3 py-2">{r.employee_name}</td>
-                <td className="px-3 py-2">{r.calls_made}</td>
+                <td className="px-3 py-2 whitespace-nowrap">{r.calling_date}</td>
+                <td className="px-3 py-2 whitespace-nowrap">{r.employee_name}</td>
+                <td className="px-3 py-2 whitespace-nowrap">{r.calls_made}</td>
                 {canEdit && (
-                  <td className="px-3 py-2 flex gap-3">
-                    <button onClick={() => startEdit(r)} className="text-accent underline">
-                      Edit
-                    </button>
-                    <button onClick={() => remove(r.id)} className="text-danger underline">
-                      Delete
-                    </button>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    <div className="flex gap-3">
+                      <button onClick={() => startEdit(r)} className="text-accent underline">
+                        Edit
+                      </button>
+                      <button onClick={() => remove(r.id)} className="text-danger underline">
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 )}
               </tr>
@@ -202,6 +204,7 @@ export default function CallHistoryPage() {
           </tbody>
         </table>
       </div>
+      <p className="text-xs text-muted sm:hidden -mt-2">Swipe the table sideways to see all columns.</p>
     </div>
   );
 }
