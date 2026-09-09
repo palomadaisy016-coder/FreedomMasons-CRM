@@ -6,9 +6,9 @@ import { createClient } from "@/lib/supabase/client";
 import { money, fmtDate } from "../components/ui";
 function StatCard({ label, value }) {
   return (
-    <div className="bg-white border border-line rounded-lg p-4">
-      <div className="text-xs text-muted mb-1">{label}</div>
-      <div className="text-xl font-semibold text-ink">{value}</div>
+    <div className="bg-white border border-line rounded-lg p-4 min-w-0">
+      <div className="text-xs text-muted mb-1 truncate">{label}</div>
+      <div className="text-xl font-semibold text-ink truncate">{value}</div>
     </div>
   );
 }
@@ -59,24 +59,24 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="bg-white border border-line rounded-lg px-6 py-6 mb-6 flex items-center gap-4">
-        <img src="/logo.png" alt="Company logo" className="h-12 w-auto" />
-        <div>
-          <h1 className="text-lg font-semibold text-ink">Outreach 360 CRM</h1>
+      <div className="bg-white border border-line rounded-lg px-4 sm:px-6 py-6 mb-6 flex items-center gap-4">
+        <img src="/logo.png" alt="Company logo" className="h-12 w-auto shrink-0" />
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold text-ink truncate">Outreach 360 CRM</h1>
           <p className="text-sm text-muted">Leads, projects, sales, and tasks in one place.</p>
         </div>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
         <StatCard label="Open leads" value={openLeads} />
-        <Link href="/projects" className="block">
-          <div className="bg-white border border-line rounded-lg p-4 hover:border-accent cursor-pointer relative">
+        <Link href="/projects" className="block min-w-0">
+          <div className="bg-white border border-line rounded-lg p-4 hover:border-accent cursor-pointer relative min-w-0">
             {unreadCount > 0 && (
               <span className="absolute -top-2 -right-2 bg-danger text-white text-xs font-semibold rounded-full h-5 min-w-5 px-1 flex items-center justify-center">
                 {unreadCount}
               </span>
             )}
             <div className="text-xs text-muted mb-1">Messages</div>
-            <div className="text-sm font-semibold text-ink">
+            <div className="text-sm font-semibold text-ink truncate">
               {latest ? `You got a text from ${latest.status}` : "No new messages"}
             </div>
           </div>
@@ -85,7 +85,7 @@ export default function DashboardPage() {
         <StatCard label="Open tasks" value={openTasks} />
       </div>
       <div className="grid md:grid-cols-2 gap-6">
-        <div>
+        <div className="min-w-0">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-semibold text-ink">Recent leads</h2>
             <Link href="/leads" className="text-xs text-accent">
@@ -94,15 +94,18 @@ export default function DashboardPage() {
           </div>
           <div className="grid gap-2">
             {leads.rows.slice(0, 5).map((l) => (
-              <div key={l.id} className="bg-white border border-line rounded-lg px-3 py-2 flex justify-between text-sm">
-                <span>{l.name}</span>
-                <span className="text-muted">{l.stage}</span>
+              <div
+                key={l.id}
+                className="bg-white border border-line rounded-lg px-3 py-2 flex justify-between gap-2 text-sm"
+              >
+                <span className="truncate">{l.name}</span>
+                <span className="text-muted shrink-0">{l.stage}</span>
               </div>
             ))}
             {leads.rows.length === 0 && <p className="text-sm text-muted">No leads yet.</p>}
           </div>
         </div>
-        <div>
+        <div className="min-w-0">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-semibold text-ink">Tasks due soon</h2>
             <Link href="/tasks" className="text-xs text-accent">
@@ -115,9 +118,12 @@ export default function DashboardPage() {
               .sort((a, b) => (a.due_date || "").localeCompare(b.due_date || ""))
               .slice(0, 5)
               .map((t) => (
-                <div key={t.id} className="bg-white border border-line rounded-lg px-3 py-2 flex justify-between text-sm">
-                  <span>{t.title}</span>
-                  <span className="text-muted">{fmtDate(t.due_date)}</span>
+                <div
+                  key={t.id}
+                  className="bg-white border border-line rounded-lg px-3 py-2 flex justify-between gap-2 text-sm"
+                >
+                  <span className="truncate">{t.title}</span>
+                  <span className="text-muted shrink-0">{fmtDate(t.due_date)}</span>
                 </div>
               ))}
             {tasks.rows.filter((t) => !t.done).length === 0 && <p className="text-sm text-muted">Nothing pending.</p>}
